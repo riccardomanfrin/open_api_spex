@@ -149,8 +149,18 @@ defmodule OpenApiSpex.Cast do
   def cast(%__MODULE__{schema: %{type: _, allOf: schemas}} = ctx) when is_list(schemas),
     do: AllOf.cast(ctx)
 
-  def cast(%__MODULE__{schema: %{type: _, oneOf: schemas}} = ctx) when is_list(schemas),
-    do: OneOf.cast(ctx)
+  def cast(%__MODULE__{schema: %{type: _, oneOf: schemas}} = ctx) when is_list(schemas) do
+    are_all_valid_schemas = Enum.reduce_while(schemas, 0, fn schema, _acc ->
+      case schema do
+        %OpenApiSpex.Schema{} -> {:cont, true}
+        _ -> {:halt, false}
+      end
+    end)
+    case are_all_valid_schemas do
+      true -> OneOf.cast(ctx)
+      false -> Object.cast(ctx)
+    end
+  end
 
   def cast(%__MODULE__{schema: %{type: :object}} = ctx),
     do: Object.cast(ctx)
